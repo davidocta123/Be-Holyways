@@ -1,16 +1,16 @@
 package handlers
 
 import (
+	"fmt"
 	funderdto "holyways/dto/funder"
 	dto "holyways/dto/result"
 	"holyways/models"
 	"holyways/repository"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
-	"fmt"
-	"log"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
@@ -19,9 +19,11 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 	"gopkg.in/gomail.v2"
 )
+
 type handlerFunder struct {
 	FunderRepository repository.FunderRepository
 }
+
 func HandlerFunder(DonaturRepository repository.FunderRepository) *handlerFunder {
 	return &handlerFunder{DonaturRepository}
 }
@@ -93,12 +95,12 @@ func (h *handlerFunder) CreateFunder(c echo.Context) error {
 	var transactionIsMatch = false
 	var funderId int
 	for !transactionIsMatch {
-  	funderId = int(time.Now().Unix())
-  	transactionData, _ := h.FunderRepository.GetFunder(funderId)
-  	if transactionData.ID == 0 {
-		transactionIsMatch = true
-  }
-}
+		funderId = int(time.Now().Unix())
+		transactionData, _ := h.FunderRepository.GetFunder(funderId)
+		if transactionData.ID == 0 {
+			transactionIsMatch = true
+		}
+	}
 	// data form pattern submit to pattern entity db user
 	funder := models.Funder{
 		ID:         funderId,
@@ -114,10 +116,12 @@ func (h *handlerFunder) CreateFunder(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, dto.ErrorResult{Code: http.StatusInternalServerError, Message: err.Error()})
 	}
 
-	// 1. Initiate Snap Client
+	// 1. Initiate Snap client
 	var s = snap.Client{}
-	s.New(os.Getenv("SB-Mid-server-_GHowuuViiuDv0mjrCRq8us8"), midtrans.Sandbox)
+	s.New(os.Getenv("SERVER_KEY"), midtrans.Sandbox)
+	// Use to midtrans.Production if you want Production Environment (accept real transaction).
 
+	// 2. Initiate Snap request param
 	req := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  strconv.Itoa(dataTransaction.ID),
@@ -132,10 +136,32 @@ func (h *handlerFunder) CreateFunder(c echo.Context) error {
 		},
 	}
 
+	// 3. Execute request create Snap transaction to Midtrans Snap API
 	snapResp, _ := s.CreateTransaction(req)
-	fmt.Println("INI SNAPRESP : ", snapResp)
+
 	return c.JSON(http.StatusOK, dto.SuccessResult{Code: http.StatusOK, Data: snapResp})
-	
+	// 1. Initiate Snap Client
+	// var s = snap.Client{}
+	// s.New(os.Getenv("SB-Mid-server-_GHowuuViiuDv0mjrCRq8us8"), midtrans.Sandbox)
+
+	// req := &snap.Request{
+	// 	TransactionDetails: midtrans.TransactionDetails{
+	// 		OrderID:  strconv.Itoa(dataTransaction.ID),
+	// 		GrossAmt: int64(dataTransaction.Total),
+	// 	},
+	// 	CreditCard: &snap.CreditCardDetails{
+	// 		Secure: true,
+	// 	},
+	// 	CustomerDetail: &midtrans.CustomerDetails{
+	// 		FName: dataTransaction.User.FullName,
+	// 		Email: dataTransaction.User.Email,
+	// 	},
+	// }
+
+	// snapResp, _ := s.CreateTransaction(req)
+	// fmt.Println("INI SNAPRESP : ", snapResp)
+	// return c.JSON(http.StatusOK, dto.SuccessResult{Code: http.StatusOK, Data: snapResp})
+
 }
 func (h *handlerFunder) Notification(c echo.Context) error {
 	var notificationPayload map[string]interface{}

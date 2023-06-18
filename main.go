@@ -6,6 +6,7 @@ import (
 	"holyways/pkg/mysql"
 	"holyways/routes"
 
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -39,6 +40,6 @@ func main() {
 
 	// var PORT = os.Getenv("PORT")
 
-	// fmt.Println("server running localhost:" + PORT)
+	// // fmt.Println("server running localhost:" + PORT)
 	// e.Logger.Fatal(e.Start(":" + PORT)) // delete localhost
 }
